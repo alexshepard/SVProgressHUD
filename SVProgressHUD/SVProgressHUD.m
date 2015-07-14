@@ -353,21 +353,26 @@ static const CGFloat SVProgressHUDUndefinedProgress = -1;
     if(string) {
         CGSize constraintSize = CGSizeMake(200.0f, 300.0f);
         CGRect stringRect;
-        if ([string respondsToSelector:@selector(boundingRectWithSize:options:attributes:context:)]){
-            stringRect = [string boundingRectWithSize:constraintSize
-                                              options:(NSStringDrawingOptions)(NSStringDrawingUsesFontLeading|NSStringDrawingTruncatesLastVisibleLine|NSStringDrawingUsesLineFragmentOrigin)
-                                           attributes:@{NSFontAttributeName: self.stringLabel.font}
-                                              context:NULL];
-        } else {
-            CGSize stringSize;
-            if ([string respondsToSelector:@selector(sizeWithAttributes:)]){
-                stringSize = [string sizeWithAttributes:@{NSFontAttributeName:[UIFont fontWithName:self.stringLabel.font.fontName size:self.stringLabel.font.pointSize]}];
+        CGSize stringSize;
+
+        // avoid a crash in iOS7 core text
+        if ([[[UIDevice currentDevice] systemVersion] compare:@"8.0" options:NSNumericSearch] != NSOrderedAscending) {
+            if ([string respondsToSelector:@selector(boundingRectWithSize:options:attributes:context:)]){
+                stringRect = [string boundingRectWithSize:constraintSize
+                                                  options:(NSStringDrawingOptions)(NSStringDrawingUsesFontLeading|NSStringDrawingTruncatesLastVisibleLine|NSStringDrawingUsesLineFragmentOrigin)
+                                               attributes:@{NSFontAttributeName: self.stringLabel.font}
+                                                  context:NULL];
             } else {
+                if ([string respondsToSelector:@selector(sizeWithAttributes:)]){
+                    stringSize = [string sizeWithAttributes:@{NSFontAttributeName:[UIFont fontWithName:self.stringLabel.font.fontName size:self.stringLabel.font.pointSize]}];
+                    stringRect = CGRectMake(0.0f, 0.0f, stringSize.width, stringSize.height);
+                }
+            }
+        } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
-                stringSize = [string sizeWithFont:self.stringLabel.font constrainedToSize:CGSizeMake(200.0f, 300.0f)];
+            stringSize = [string sizeWithFont:self.stringLabel.font constrainedToSize:CGSizeMake(200.0f, 300.0f)];
 #pragma clang diagnostic pop
-            }
             stringRect = CGRectMake(0.0f, 0.0f, stringSize.width, stringSize.height);
         }
         stringWidth = stringRect.size.width;
